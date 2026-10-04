@@ -1,0 +1,60 @@
+schema: spec-driven
+
+context: |
+  Language: Russian
+  All artifacts must be written in Russian.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+  This workspace coordinates the Telegram -> Hermes specialist profiles -> Codex CLI development project.
+  Existing pilot repositories are foundations, not a completed Telegram system.
+  OpenSpec owns specifications; Hermes Kanban owns execution attempts and task lifecycle.
+  Preserve project AGENTS.md, installed Addy Agent Skills, OAuth state, and existing research.
+  A structurally complete change is a draft until the owner approves its exact revision.
+  Do not implement, publish, deploy, alter credentials, or archive a change during proposal work.
+  Use actual API/browser test receipts; model statements and structural validation are not runtime evidence.
+  Read .hermes/research/telegram-hermes-codex/08-target-concept.md and 10-implementation-plan.md for background.
+  Follow openspec/WORKFLOW.md for every feature, fix, refactor, documentation, configuration, and tooling change.
+
+rules:
+  proposal:
+    - State non-goals and unresolved owner decisions explicitly.
+  specs:
+    - Use concrete SHALL requirements with WHEN/THEN scenarios, including failure paths.
+    - Keep task identity, approval revision, runtime results, and delivery receipt separate.
+  design:
+    - Distinguish verified installed capabilities from proposed adapters and blocked integration gates.
+  tasks:
+    - Reference requirement IDs and exact expected verification results.
+    - Leave implementation and owner approval checkboxes unchecked until verified.
+    - Link each task to a requirement/scenario or a docs criterion and exact verification evidence.
+    - Distinguish local/synthetic/native/canary evidence from full live acceptance; do not close a parent task for a partial result.
+
+operations:
+  apply:
+    guidance:
+      - Require explicit owner approval for the exact spec revision before implementing.
+      - Treat missing authorization or incompatible runtime capabilities as blocked.
+  archive:
+    guidance:
+      - Require runtime acceptance evidence and owner authorization; do not archive to make validation pass.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
