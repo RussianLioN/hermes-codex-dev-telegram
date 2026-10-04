@@ -1,0 +1,15 @@
+#!/bin/zsh
+set -euo pipefail
+umask 077
+root="${0:A:h}"
+export MEMPALACE_PALACE_PATH="${root}/.hermes/tooling/mempalace/palace"
+export MEMPALACE_BACKEND="chroma"
+export MEMPALACE_EMBEDDING_MODEL="embeddinggemma"
+export ANONYMIZED_TELEMETRY=False
+export HF_HUB_DISABLE_TELEMETRY=1
+export DO_NOT_TRACK=1
+if [[ "${1:-}" == "--mcp" ]]; then
+    shift
+    exec "${root}/.hermes/tooling/mempalace/venv/bin/mempalace-mcp" "$@"
+fi
+exec "${root}/.hermes/tooling/mempalace/venv/bin/mempalace" "$@"
