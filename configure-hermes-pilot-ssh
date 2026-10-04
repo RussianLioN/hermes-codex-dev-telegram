@@ -1,0 +1,51 @@
+#!/bin/zsh
+set -euo pipefail
+
+profile_name='hermes-codex-pilot'
+ssh_dir="$HOME/.ssh"
+config_path="$ssh_dir/config"
+
+mkdir -p "$ssh_dir"
+chmod 700 "$ssh_dir"
+touch "$config_path"
+chmod 600 "$config_path"
+
+if awk -v profile_name="$profile_name" '
+    $1 == "Host" {
+        for (field = 2; field <= NF; field++) {
+            if ($field == profile_name) {
+                found = 1
+            }
+        }
+    }
+    END { exit(found ? 0 : 1) }
+' "$config_path"; then
+    print "Профиль SSH '$profile_name' уже есть: изменений не требуется."
+    exit 0
+fi
+
+timestamp="$(date +%Y%m%d%H%M%S)"
+backup_path="$config_path.before-$profile_name.$timestamp"
+temporary_path="$(mktemp "$ssh_dir/config.$profile_name.XXXXXX")"
+trap 'rm -f "$temporary_path"' EXIT
+
+cp -p "$config_path" "$backup_path"
+{
+    print 'Host hermes-codex-pilot'
+    print '    HostName 127.0.0.1'
+    print '    Port 2222'
+    print '    User rl'
+    print '    IdentityFile ~/.ssh/id_ed25519_hermes_codex_pilot'
+    print '    IdentitiesOnly yes'
+    print '    PreferredAuthentications publickey'
+    print '    PasswordAuthentication no'
+    print '    StrictHostKeyChecking yes'
+    print ''
+    cat "$config_path"
+} > "$temporary_path"
+
+mv "$temporary_path" "$config_path"
+trap - EXIT
+
+print "Профиль SSH '$profile_name' добавлен. Резервная копия: $backup_path"
+print "Подключение: ssh $profile_name"

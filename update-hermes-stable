@@ -1,0 +1,75 @@
+#!/bin/zsh
+# Обновлять Hermes только через проверенный стабильный выпуск GitHub.
+set -euo pipefail
+
+umask 077
+script_dir="${0:A:h}"
+
+if (( $# > 1 )) || [[ "${1:-}" != "" && "${1:-}" != "--check" ]]; then
+  print -u2 "Использование: $0 [--check]"
+  exit 64
+fi
+
+release_json="$(curl -fsSL --proto '=https' --tlsv1.2 \
+  -H 'Accept: application/vnd.github+json' \
+  https://api.github.com/repos/NousResearch/hermes-agent/releases/latest)"
+release_tag="$(printf '%s' "$release_json" | jq -er 'select(.draft == false and .prerelease == false) | .tag_name')"
+tag_object="$(git ls-remote --tags https://github.com/NousResearch/hermes-agent.git "refs/tags/$release_tag" | awk 'NR == 1 { print $1 }')"
+release_commit="$(git ls-remote --tags https://github.com/NousResearch/hermes-agent.git "refs/tags/${release_tag}^{}" | awk 'NR == 1 { print $1 }')"
+source_branch="$(git ls-remote --symref https://github.com/NousResearch/hermes-agent.git HEAD | awk '/^ref:/ { sub("refs/heads/", "", $2); print $2; exit }')"
+
+if [[ -z "$tag_object" ]]; then
+  print -u2 "Не удалось получить объект помеченного выпуска $release_tag."
+  exit 1
+fi
+
+# Для облегчённой метки объект метки уже является коммитом. Для аннотированной
+# метки используем разыменованный коммит, чтобы и загрузка установщика, и его
+# запуск были привязаны к одному неизменяемому объекту.
+if [[ -z "$release_commit" ]]; then
+  release_commit="$tag_object"
+fi
+
+if [[ -z "$source_branch" ]]; then
+  print -u2 "Не удалось определить основную ветку репозитория Hermes."
+  exit 1
+fi
+
+if [[ "${1:-}" == "--check" ]]; then
+  print "Последний стабильный выпуск Hermes: $release_tag ($release_commit)"
+  exit 0
+fi
+
+# Скрипт резервного копирования проверяет целостность архива и закрытые права.
+# Любая ошибка останавливает обновление до изменения установленной программы.
+"$script_dir/backup-hermes-oauth"
+"$HOME/.local/bin/hermes" auth status openai-codex >/dev/null
+
+install_dir="$HOME/.hermes/hermes-agent"
+if [[ ! -d "$install_dir/.git" ]]; then
+  print -u2 "Не найден ожидаемый клон Hermes: $install_dir"
+  exit 1
+fi
+
+# У официального установщика есть промежуточное переключение на основную ветку.
+# В закреплённой установке такой ссылки нет, поэтому создаём только служебную
+# локальную ветку до вызова установщика. Итоговое состояние всё равно будет
+# отсоединённым и закреплённым на release_commit.
+git -C "$install_dir" fetch origin "+refs/heads/$source_branch:refs/remotes/origin/$source_branch"
+if ! git -C "$install_dir" show-ref --verify --quiet "refs/heads/$source_branch"; then
+  git -C "$install_dir" branch "$source_branch" "refs/remotes/origin/$source_branch"
+fi
+
+installer_path="$(mktemp -t hermes-install.XXXXXX)"
+trap 'rm -f "$installer_path"' EXIT
+
+curl -fsSL --proto '=https' --tlsv1.2 -o "$installer_path" \
+  "https://raw.githubusercontent.com/NousResearch/hermes-agent/$release_commit/scripts/install.sh"
+# Установщик сначала синхронизирует существующий клон с веткой. Затем его
+# параметр --commit переводит клон на проверенный коммит стабильного выпуска.
+/bin/bash "$installer_path" --branch "$source_branch" --commit "$release_commit" --no-skills --skip-setup
+
+"$HOME/.local/bin/hermes" auth status openai-codex
+"$HOME/.local/bin/hermes" config check
+"$HOME/.local/bin/hermes" --version
+print "Безопасное обновление до $release_tag завершено. Авторизация OAuth проверена после обновления."

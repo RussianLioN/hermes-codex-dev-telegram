@@ -1,0 +1,17 @@
+#!/bin/zsh
+# Create and verify a private Hermes state snapshot before external changes.
+set -euo pipefail
+
+umask 077
+backup_dir="$HOME/.hermes/backups"
+timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+archive="$backup_dir/oauth-snapshot-$timestamp.zip"
+
+mkdir -p "$backup_dir"
+chmod 700 "$backup_dir"
+"$HOME/.local/bin/hermes" backup --output "$archive"
+chmod 600 "$archive"
+unzip -t "$archive" >/dev/null
+[[ "$(stat -f %Lp "$backup_dir")" == "700" ]]
+[[ "$(stat -f %Lp "$archive")" == "600" ]]
+printf 'Verified private Hermes snapshot: %s\n' "$archive"

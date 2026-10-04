@@ -1,0 +1,4 @@
+#!/bin/zsh
+# Hermes Agent launcher with a hard scope for file-write tools.
+export HERMES_WRITE_SAFE_ROOT="/Users/s060874gmail.com/coding/projects"
+exec "/Users/s060874gmail.com/.local/bin/hermes" "$@"
